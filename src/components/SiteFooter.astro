@@ -1,0 +1,63 @@
+---
+const year = 2026;
+---
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <p>
+      Asm198x is part of the 198x family. The emulator is <a href="https://emu198x.github.io">Emu198x</a>;
+      the teaching site is <a href="https://code198x.com">Code Like It's 198x</a>.
+    </p>
+    <a href="https://github.com/asm198x">GitHub</a>
+  </div>
+  <div class="container legal">
+    <span>© {year} · GPL-2.0-or-later</span>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    margin-top: 5rem;
+    border-top: 1px solid var(--line);
+    padding: 2rem 0 calc(2rem + env(safe-area-inset-bottom));
+    background: var(--paper-strong);
+  }
+
+  .footer-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  p {
+    max-width: 720px;
+    margin: 0;
+    font-size: 0.94rem;
+  }
+
+  .footer-inner > a {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    color: var(--ink);
+    font-weight: 650;
+  }
+
+  p a {
+    font-weight: 650;
+  }
+
+  .legal {
+    margin-top: 0.5rem;
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+  }
+
+  @media (max-width: 680px) {
+    .footer-inner {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+</style>

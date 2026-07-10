@@ -1,0 +1,4 @@
+dist/
+.astro/
+.tmp/
+node_modules/

@@ -1,0 +1,498 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+
+const cpus = [
+  '6502', '65816', 'HuC6280', 'Z80', 'Z80N', 'SM83', '8080', 'Z8000',
+  '6800', '6809', '68000', 'CDP1802', '8048', 'SC/MP', 'F8', '2650',
+  'TMS7000', 'PDP-11', 'TMS9900', 'CP1610',
+];
+
+const frontDoors = [
+  {
+    dialect: 'acme',
+    target: 'C64 · 6502',
+    blurb: 'The whole 80-unit C64 curriculum assembles byte-identical to acme -f cbm.',
+  },
+  {
+    dialect: 'ca65',
+    target: 'NES · 6502 / 65816',
+    blurb: 'Assembles and links a finished .nes ROM (iNES + PRG + CHR); all 32 NES units match ca65 + ld65.',
+  },
+  {
+    dialect: 'pasmo / sjasmplus',
+    target: 'ZX Spectrum · Z80',
+    blurb: 'The full documented Z80 plus the Next’s Z80N; 20 units match both pasmonext and sjasmplus.',
+  },
+  {
+    dialect: 'vasm',
+    target: 'Amiga · 68000',
+    blurb: 'Motorola syntax to a loadable hunk executable with --exe; 32/32 hunk-exe parity with vasmm68k_mot.',
+  },
+  {
+    dialect: 'lwasm',
+    target: 'Dragon / CoCo · 6809',
+    blurb: 'The full 6809 including the computed indexed modes; validated against lwasm --6809 --raw.',
+  },
+];
+
+const crates = [
+  {
+    name: 'isa',
+    role: 'Dependency-free declarative instruction-set specs — the single source of truth for encoding.',
+    href: 'https://github.com/asm198x/asm198x/tree/main/crates/isa',
+  },
+  {
+    name: 'isa-disasm',
+    role: 'Spec-driven disassemblers that decode against isa without pulling in the assembler.',
+    href: 'https://github.com/asm198x/asm198x/tree/main/crates/isa-disasm',
+  },
+  {
+    name: 'debug198x',
+    role: 'A cross-CPU debug-info sidecar: line and address maps, typed symbols, and sections.',
+    href: 'https://github.com/asm198x/asm198x/tree/main/crates/debug198x',
+  },
+  {
+    name: 'asm198x',
+    role: 'The assembler library, dialect front-ends, shared engine, linked-output paths, and the CLI.',
+    href: 'https://github.com/asm198x/asm198x/tree/main/crates/asm198x',
+  },
+];
+---
+
+<BaseLayout
+  title="Asm198x"
+  description="Asm198x is one modern, statically-linked toolchain of assemblers and disassemblers for the 198x era's CPUs — source-compatible with the dialects you already use, validated byte-for-byte."
+>
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">Assemblers &amp; disassemblers</p>
+          <h1>Asm198x</h1>
+          <p class="lede">
+            One modern, statically-linked toolchain for the retro CPUs of the
+            198x era &mdash; source-compatible with the dialects you already use,
+            validated byte-for-byte against the reference tools, built to still
+            run in ten years.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="#install">Get the binary</a>{' '}
+            <a class="button secondary" href="#cpus">See the CPUs</a>{' '}
+            <a class="button secondary" href="https://github.com/asm198x/asm198x">GitHub</a>
+          </div>
+        </div>
+
+        <div class="terminal" aria-label="Example asm198x invocations">
+          <div class="terminal-bar" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <pre><code><span class="c"># one binary, the dialects you already use</span>
+<span class="c">$</span> asm198x --dialect acme  countdown.s -o countdown.bin
+<span class="c">$</span> asm198x --dialect vasm  --exe game.s -o game
+<span class="c">$</span> asm198x --dialect ca65  game.asm -o game.nes
+<span class="c">$</span> asm198x --disasm --dialect 6502 --org 0x0200 game.bin</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="why" class="container why" aria-label="Why Asm198x">
+      <header class="section-head">
+        <p class="eyebrow">Why</p>
+        <h2>One toolchain, not a museum of dead binaries.</h2>
+        <p class="section-lede">
+          The period assemblers are dead-OS binaries &mdash; you need DOSBox or a
+          full emulator just to invoke them. The modern community tools mostly
+          work, but they're fragmented: a different tool, dialect, and build
+          dance per machine, much of it unmaintained C. Asm198x is one
+          statically-linked, cross-platform toolchain that spans the family's
+          CPUs. The rule is <strong>source-compatibility</strong> &mdash; real
+          source assembles unchanged, and output is checked byte-for-byte against
+          the reference tools. <em>Rescue beats replace.</em>
+        </p>
+      </header>
+    </section>
+
+    <section id="cpus" class="container cpus" aria-label="CPU coverage">
+      <p class="eyebrow">The CPU surface</p>
+      <h2>Broad 8- and 16-bit coverage, today.</h2>
+      <p class="section-lede">
+        Source-compatible front-ends and spec-driven disassemblers across these
+        instruction sets &mdash; each a declarative spec that both the assembler
+        and the disassembler share.
+      </p>
+      <ul class="cpu-strip">
+        {cpus.map((cpu) => <li class="chip">{cpu}</li>)}
+      </ul>
+    </section>
+
+    <section class="container front-doors" aria-label="Validated dialects">
+      <header class="section-head">
+        <p class="eyebrow">Front doors</p>
+        <h2>Match a dialect, not a house syntax.</h2>
+      </header>
+      <div class="tool-grid">
+        {frontDoors.map((door) => (
+          <article class="tool">
+            <p class="eyebrow">{door.target}</p>
+            <h3>{door.dialect}</h3>
+            <p>{door.blurb}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section class="architecture-band">
+      <div class="container">
+        <header class="section-head">
+          <p class="eyebrow">Architecture</p>
+          <h2>Four crates, split only where a boundary is real.</h2>
+          <p class="section-lede">
+            The <strong>engine ↔ dialect ↔ spec</strong> seam is what lets one
+            binary span many CPUs and dialects: a dialect is a front-end module,
+            a CPU is a spec, and the disassembler decodes against the same specs
+            the assembler emits from.
+          </p>
+        </header>
+        <div class="tool-grid">
+          {crates.map((crate) => (
+            <article class="tool">
+              <h3><a href={crate.href}>{crate.name}</a></h3>
+              <p>{crate.role}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section id="install" class="install-band">
+      <div class="container install-grid">
+        <div>
+          <p class="eyebrow">Install</p>
+          <h2>Grab a binary, or build it.</h2>
+          <p>
+            Asm198x ships as a prebuilt, statically-linked binary on GitHub
+            Releases for macOS, Linux, and Windows &mdash; no runtime, no
+            toolchain. Or build it from source with a single <code>cargo build</code>;
+            the CLI is featherweight, with no GUI or graphics dependencies.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="https://github.com/asm198x/asm198x/releases">Download releases</a>{' '}
+            <a class="button secondary" href="https://github.com/asm198x/asm198x">Source</a>
+          </div>
+        </div>
+        <pre class="install-code"><code><span class="c"># prebuilt binaries</span>
+github.com/asm198x/asm198x/releases
+
+<span class="c"># or build from source</span>
+git clone https://github.com/asm198x/asm198x
+cd asm198x && cargo build --release</code></pre>
+      </div>
+    </section>
+
+    <section class="container principles" aria-label="How Asm198x works">
+      <article>
+        <p class="eyebrow">Source-compatible</p>
+        <h3>The dialect you already use.</h3>
+        <p>
+          Each front-end matches an existing assembler's syntax where
+          compatibility matters &mdash; acme, ca65, pasmo, sjasmplus, vasm,
+          lwasm. Real-world source assembles unchanged; there's no house syntax
+          to relearn.
+        </p>
+      </article>
+      <article>
+        <p class="eyebrow">Validated</p>
+        <h3>Byte-for-byte against the references.</h3>
+        <p>
+          Output is checked against the period-correct reference tools and frozen
+          fixtures, per CPU and per dialect &mdash; and where a disassembler
+          exists, assemble → disassemble → reassemble round-trips stay identical.
+        </p>
+      </article>
+      <article>
+        <p class="eyebrow">Built to last</p>
+        <h3>One binary, spanning the family.</h3>
+        <p>
+          A single statically-linked, cross-platform toolchain covers the whole
+          CPU surface &mdash; no per-machine build dance, no dead-OS binaries,
+          documented to still run in ten years.
+        </p>
+      </article>
+    </section>
+  </main>
+</BaseLayout>
+
+<style>
+  .hero {
+    border-bottom: 1px solid var(--line);
+    background:
+      linear-gradient(135deg, rgba(11, 110, 105, 0.11), transparent 42%),
+      var(--paper);
+  }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+    gap: 4rem;
+    align-items: center;
+    padding-block: 4.5rem;
+  }
+
+  h1 {
+    margin: 0;
+    color: var(--ink);
+    font-size: clamp(3.5rem, 11vw, 8rem);
+    line-height: 0.86;
+  }
+
+  .lede {
+    max-width: 640px;
+    margin: 1.4rem 0 0;
+    font-size: clamp(1.15rem, 2vw, 1.5rem);
+    line-height: 1.48;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+  }
+
+  .button {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    padding: 0 1rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .primary {
+    background: var(--accent);
+    color: white;
+  }
+
+  .secondary {
+    background: var(--panel);
+    color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .primary:hover {
+      background: var(--accent-strong);
+      color: white;
+    }
+    .secondary:hover {
+      color: var(--accent-strong);
+      box-shadow: inset 0 0 0 1px var(--accent);
+    }
+  }
+
+  /* Terminal panel */
+  .terminal {
+    overflow: hidden;
+    border-radius: 10px;
+    background: var(--code-bg);
+    box-shadow: var(--shadow-md);
+  }
+
+  .terminal-bar {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .terminal-bar span {
+    width: 0.72rem;
+    height: 0.72rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.22);
+  }
+
+  .terminal pre {
+    margin: 0;
+    padding: 1.25rem 1.35rem;
+    background: transparent;
+    box-shadow: none;
+    font-size: 0.86rem;
+    line-height: 1.7;
+  }
+
+  .terminal .c {
+    color: #6f7c8a;
+  }
+
+  /* Sections */
+  .section-head {
+    max-width: 760px;
+  }
+
+  .why,
+  .cpus,
+  .front-doors {
+    padding-top: 4.5rem;
+  }
+
+  .section-head h2,
+  .cpus h2,
+  .install-grid h2,
+  .architecture-band h2 {
+    margin: 0;
+    color: var(--ink);
+    font-size: clamp(1.7rem, 3.4vw, 2.4rem);
+    line-height: 1.1;
+  }
+
+  .section-lede {
+    margin-top: 1rem;
+    max-width: 760px;
+    font-size: 1.05rem;
+    line-height: 1.55;
+  }
+
+  /* CPU strip */
+  .cpu-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 2rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .chip {
+    display: inline-flex;
+    min-height: 2.1rem;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0 0.85rem;
+    background: var(--panel);
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  /* Card grids (front doors + crates) */
+  .tool-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-top: 2.25rem;
+  }
+
+  .tool {
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    background: var(--panel);
+    box-shadow: inset 0 0 0 1px var(--line), var(--shadow-sm);
+  }
+
+  .tool h3 {
+    margin: 0 0 0.6rem;
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    color: var(--ink);
+  }
+
+  .tool h3 a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .tool h3 a:hover {
+    color: var(--signal);
+  }
+
+  .tool p {
+    margin: 0;
+    font-size: 0.96rem;
+    line-height: 1.55;
+  }
+
+  .architecture-band {
+    margin-top: 4.5rem;
+    border-block: 1px solid var(--line);
+    padding-block: 4rem;
+    background: var(--paper-strong);
+  }
+
+  .install-band {
+    margin-top: 4.5rem;
+    border-block: 1px solid var(--line);
+    padding-block: 4rem;
+    background: var(--paper-strong);
+  }
+
+  .install-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 0.85fr);
+    gap: 3rem;
+    align-items: center;
+  }
+
+  .install-grid p {
+    margin: 1rem 0 0;
+    font-size: 1.02rem;
+    line-height: 1.55;
+  }
+
+  .install-grid p code {
+    color: var(--accent-strong);
+    font-size: 0.9em;
+  }
+
+  .install-code {
+    margin: 0;
+    font-size: 0.86rem;
+    line-height: 1.7;
+  }
+
+  .install-code code {
+    color: var(--code-ink);
+  }
+
+  .install-code .c {
+    color: #6f7c8a;
+  }
+
+  .principles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 2.5rem;
+    padding-block: 4.5rem;
+  }
+
+  .principles h3 {
+    margin: 0 0 0.6rem;
+    color: var(--ink);
+    font-size: 1.25rem;
+    line-height: 1.2;
+  }
+
+  .principles p {
+    margin: 0;
+    line-height: 1.55;
+  }
+
+  @media (max-width: 900px) {
+    .hero-grid,
+    .install-grid {
+      grid-template-columns: 1fr;
+      gap: 2.5rem;
+    }
+
+    .hero-grid {
+      padding-block: 3rem;
+    }
+  }
+</style>
