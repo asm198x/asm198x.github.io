@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - main
+  # The book comes from another repo, so a site rebuild is how its changes
+  # reach the world. `repository_dispatch` lets an asm198x release trigger one;
+  # the weekly run is the backstop for when nothing fires it.
+  repository_dispatch:
+    types: [docs-changed]
+  schedule:
+    - cron: "0 6 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -34,6 +41,62 @@ jobs:
 
       - name: Build site
         run: npm run build
+
+      # The book's source lives in the assembler's own repo, next to the code
+      # it documents, so a change that stales a page fails the same CI run that
+      # made it. Here we only *publish* it: this workflow checks that repo out
+      # and builds the book into /docs/ on the site.
+      #
+      # The dependency points site -> code, which is the direction that needs
+      # no credentials: asm198x is public, so a plain checkout reaches it and
+      # nothing has to push the other way.
+      - name: Check out asm198x for the book
+        uses: actions/checkout@v7
+        with:
+          repository: asm198x/asm198x
+          # The released binary is what people have installed, so the published
+          # book describes the release rather than whatever main is mid-change.
+          # `fetch-depth: 0` so the tag lookup below can see the tags.
+          fetch-depth: 0
+          path: _asm198x
+
+      - name: Select the version to document
+        id: release
+        working-directory: _asm198x
+        run: |
+          # Prefer the newest release that actually carries the book. The book
+          # landed after v0.0.12, so the newest tag alone would check out a
+          # commit with no `docs/book` and fail the build — and every release
+          # before the book will always be in that state, so this is a standing
+          # condition rather than a one-off.
+          ref=""
+          # release-plz tags as `asm198x-v0.0.12`, not `v0.0.12`; a bare
+          # `v*` glob silently matches nothing and the fallback below would
+          # quietly publish main forever.
+          for tag in $(git tag --list 'asm198x-v*' --sort=-v:refname); do
+            if git cat-file -e "${tag}:docs/book/book.toml" 2>/dev/null; then
+              ref="${tag}"
+              break
+            fi
+          done
+          if [ -z "${ref}" ]; then
+            echo "::notice::no release carries the book yet; building from main"
+            ref=$(git rev-parse HEAD)
+          fi
+          git checkout --quiet "${ref}"
+          echo "ref=${ref}" >> "$GITHUB_OUTPUT"
+          echo "Building the book from ${ref}"
+
+      - name: Install mdBook
+        uses: taiki-e/install-action@v2
+        with:
+          tool: mdbook
+
+      - name: Build the book into /docs/
+        run: |
+          mdbook build _asm198x/docs/book
+          mkdir -p dist/docs
+          cp -R _asm198x/docs/book/book/. dist/docs/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
