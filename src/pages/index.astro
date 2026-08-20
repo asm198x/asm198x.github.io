@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
+import { machine } from '@lib/parity';
 
 const cpus = [
   '6502', '65816', 'HuC6280', 'Z80', 'Z80N', 'SM83', '8080', 'Z8000',
@@ -7,33 +8,69 @@ const cpus = [
   'TMS7000', 'PDP-11', 'TMS9900', 'CP1610',
 ];
 
+/**
+ * The front doors, and what has been proved about each.
+ *
+ * The counts come from the parity figures the assembler commits, not from this
+ * file. They were typed here once and went stale — the page claimed 80 C64
+ * units, 32 NES and 20 Spectrum while the corpus held 138, 51 and 161.
+ *
+ * So each blurb is written twice: with the count and without. A build that
+ * cannot see the figures drops the number rather than printing a remembered
+ * one. `slug: null` marks a machine with no curriculum to count.
+ */
 const frontDoors = [
   {
     dialect: 'acme',
     target: 'C64 · 6502',
-    blurb: 'The whole 80-unit C64 curriculum assembles byte-identical to acme -f cbm.',
+    slug: 'commodore-64',
+    blurb: (n: number | null) =>
+      n === null
+        ? 'The C64 curriculum assembles byte-identical to acme -f cbm.'
+        : `All ${n} C64 curriculum sources assemble byte-identical to acme -f cbm.`,
   },
   {
     dialect: 'ca65',
     target: 'NES · 6502 / 65816',
-    blurb: 'Assembles and links a finished .nes ROM (iNES + PRG + CHR); all 32 NES units match ca65 + ld65.',
+    slug: 'nintendo-entertainment-system',
+    blurb: (n: number | null) =>
+      `Assembles and links a finished .nes ROM (iNES + PRG + CHR); ${
+        n === null ? 'the NES curriculum matches' : `all ${n} NES sources match`
+      } ca65 + ld65.`,
   },
   {
     dialect: 'pasmo / sjasmplus',
     target: 'ZX Spectrum · Z80',
-    blurb: 'The full documented Z80 plus the Next’s Z80N; 20 units match both pasmonext and sjasmplus.',
+    slug: 'sinclair-zx-spectrum',
+    blurb: (n: number | null) =>
+      `The full documented Z80 plus the Next’s Z80N; ${
+        n === null
+          ? 'the Spectrum curriculum matches'
+          : `all ${n} Spectrum sources match`
+      } both pasmonext and sjasmplus.`,
   },
   {
     dialect: 'vasm',
     target: 'Amiga · 68000',
-    blurb: 'Motorola syntax to a loadable hunk executable with --exe; 32/32 hunk-exe parity with vasmm68k_mot.',
+    slug: 'commodore-amiga',
+    blurb: (n: number | null) =>
+      `Motorola syntax to a loadable hunk executable with --exe; ${
+        n === null ? 'the Amiga curriculum matches' : `all ${n} Amiga sources match`
+      } vasmm68k_mot.`,
   },
   {
     dialect: 'lwasm',
     target: 'Dragon / CoCo · 6809',
-    blurb: 'The full 6809 including the computed indexed modes; validated against lwasm --6809 --raw.',
+    slug: null,
+    // No curriculum exists for the 6809 yet; the suite compares hand-written
+    // stand-in programs, which is a weaker claim and is worded as one.
+    blurb: () =>
+      'The full 6809 including the computed indexed modes; validated against lwasm --6809 --raw.',
   },
-];
+].map((door) => ({
+  ...door,
+  text: door.blurb(door.slug ? (machine(door.slug)?.sources ?? null) : null),
+}));
 
 const crates = [
   {
@@ -136,7 +173,7 @@ const crates = [
           <article class="tool">
             <p class="eyebrow">{door.target}</p>
             <h3>{door.dialect}</h3>
-            <p>{door.blurb}</p>
+            <p>{door.text}</p>
           </article>
         ))}
       </div>

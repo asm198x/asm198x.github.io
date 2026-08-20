@@ -5,3 +5,6 @@ node_modules/
 
 # Shared components, fetched at build time — never vendored.
 _198x-ui/
+# The assembler checkout the parity figures and the book are read from. CI
+# makes it with actions/checkout; locally it is a symlink or a clone.
+_asm198x/
