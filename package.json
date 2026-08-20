@@ -4,7 +4,10 @@
   "private": true,
   "version": "0.0.1",
   "scripts": {
+    "ui:fetch": "./scripts/fetch-ui.sh",
+    "predev": "npm run ui:fetch",
     "dev": "astro dev",
+    "prebuild": "npm run ui:fetch",
     "build": "astro build",
     "preview": "astro preview"
   },

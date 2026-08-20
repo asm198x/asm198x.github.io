@@ -2,3 +2,6 @@ dist/
 .astro/
 .tmp/
 node_modules/
+
+# Shared components, fetched at build time — never vendored.
+_198x-ui/

@@ -1,17 +1,19 @@
 ---
+/**
+ * The family strip is shared and its wording is fixed by
+ * 198x/decisions/sibling-cross-promotion.md — siblings as peers, the hub
+ * linked, each name pointing at its GitHub org.
+ */
+import FamilyStrip from '@198x-ui/components/FamilyStrip.astro';
+
 const year = 2026;
 ---
 
 <footer class="site-footer">
-  <div class="container footer-inner">
-    <p>
-      Asm198x is part of the 198x family. The emulator is <a href="https://emu198x.github.io">Emu198x</a>;
-      the teaching site is <a href="https://code198x.com">Code Like It's 198x</a>.
-    </p>
-    <a href="https://github.com/asm198x">GitHub</a>
-  </div>
+  <FamilyStrip />
   <div class="container legal">
     <span>© {year} · GPL-2.0-or-later</span>
+    <a href="https://github.com/asm198x">GitHub</a>
   </div>
 </footer>
 

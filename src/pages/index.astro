@@ -227,7 +227,7 @@ cd asm198x && cargo build --release</code></pre>
   .hero {
     border-bottom: 1px solid var(--line);
     background:
-      linear-gradient(135deg, rgba(11, 110, 105, 0.11), transparent 42%),
+      linear-gradient(135deg, color-mix(in oklab, var(--h-accent) 10%, transparent), transparent 42%),
       var(--paper);
   }
 
@@ -326,7 +326,7 @@ cd asm198x && cargo build --release</code></pre>
   }
 
   .terminal .c {
-    color: #6f7c8a;
+    color: var(--h-ink-faint);
   }
 
   /* Sections */
@@ -463,7 +463,7 @@ cd asm198x && cargo build --release</code></pre>
   }
 
   .install-code .c {
-    color: #6f7c8a;
+    color: var(--h-ink-faint);
   }
 
   .principles {
