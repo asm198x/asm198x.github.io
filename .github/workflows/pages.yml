@@ -30,18 +30,6 @@ jobs:
       - name: Check out site
         uses: actions/checkout@v7
 
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build site
-        run: npm run build
-
       # The book's source lives in the assembler's own repo, next to the code
       # it documents, so a change that stales a page fails the same CI run that
       # made it. Here we only *publish* it: this workflow checks that repo out
@@ -86,6 +74,23 @@ jobs:
           git checkout --quiet "${ref}"
           echo "ref=${ref}" >> "$GITHUB_OUTPUT"
           echo "Building the book from ${ref}"
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Built after the version is selected, so the site can state which release
+      # it documents. Before this reorder the Astro build ran first and the
+      # value was computed, used for the book, and thrown away.
+      - name: Build site
+        run: npm run build
+        env:
+          ASM198X_REF: ${{ steps.release.outputs.ref }}
 
       - name: Install mdBook
         uses: taiki-e/install-action@v2

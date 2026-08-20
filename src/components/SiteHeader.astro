@@ -8,8 +8,8 @@ import SiteNav from '@198x-ui/components/SiteNav.astro';
 interface Props {
   /** Marks the current section, matched against an item label. */
   current?: string;
-  /** The released version this site documents. */
-  version?: string;
+  /** The version this site documents, already labelled. Null while unknown. */
+  version?: string | null;
 }
 
 const { current, version } = Astro.props;
@@ -25,4 +25,4 @@ const items = [
 ].map((item) => ({ ...item, current: item.label === current }));
 ---
 
-<SiteNav prefix="asm" project="asm" items={items} version={version} />
+<SiteNav prefix="asm" project="asm" items={items} version={version ?? undefined} />

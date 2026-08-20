@@ -1,6 +1,7 @@
 ---
 import SiteFooter from '@components/SiteFooter.astro';
 import SiteHeader from '@components/SiteHeader.astro';
+import { documentedVersion } from '@lib/version';
 import '@198x-ui/tokens.css';
 import '../styles/global.css';
 
@@ -15,6 +16,7 @@ const {
 } = Astro.props;
 
 const pageTitle = title === 'Asm198x' ? title : `${title} - Asm198x`;
+const version = documentedVersion();
 ---
 
 <!doctype html>
@@ -33,7 +35,7 @@ const pageTitle = title === 'Asm198x' ? title : `${title} - Asm198x`;
     />
   </head>
   <body>
-    <SiteHeader />
+    <SiteHeader version={version} />
     <slot />
     <SiteFooter />
   </body>
