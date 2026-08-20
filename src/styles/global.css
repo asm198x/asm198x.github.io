@@ -22,6 +22,9 @@
   --shadow-md: 0 16px 40px rgba(58, 44, 31, 0.10);
   --radius: 8px;
   --container: 1180px;
+  /* Line the shared nav and footer up with .container rather than letting them
+   * sit a few pixels inside it. */
+  --h-inset: max(1rem, calc((100vw - var(--container)) / 2));
   --font-sans: var(--h-font-ui);
   --font-read: var(--h-font-read);
   --font-mono: var(--h-font-mono);
