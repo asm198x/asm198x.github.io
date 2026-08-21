@@ -3,7 +3,7 @@
  *
  * The Pages workflow selects the newest release tag that carries the book and
  * passes it as ASM198X_REF. That is deliberately *not* always the newest
- * release: a release without `docs/book/book.toml` is skipped, and when no tag
+ * release: a release without `docs/book/src/SUMMARY.md` is skipped, and when no tag
  * qualifies the workflow falls back to building from main.
  *
  * So the label has to be honest. It says which version the pages describe, and

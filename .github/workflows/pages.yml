@@ -62,7 +62,12 @@ jobs:
           # `v*` glob silently matches nothing and the fallback below would
           # quietly publish main forever.
           for tag in $(git tag --list 'asm198x-v*' --sort=-v:refname); do
-            if git cat-file -e "${tag}:docs/book/book.toml" 2>/dev/null; then
+            # Probes SUMMARY.md rather than book.toml: the nav is what the
+            # site renders from, and book.toml is mdBook's config, which is
+            # being withdrawn. The two are equivalent across every tag — the
+            # five that carry one carry the other — so this changes nothing
+            # today and keeps working once book.toml is gone.
+            if git cat-file -e "${tag}:docs/book/src/SUMMARY.md" 2>/dev/null; then
               ref="${tag}"
               break
             fi
