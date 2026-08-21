@@ -15,9 +15,12 @@ interface Props {
 const { current, version } = Astro.props;
 
 const items = [
-  { label: 'Why', href: '/#why' },
+  // These were anchors on the landing page before the pages existed. The
+  // landing sections stay — they are the short version — but the nav should
+  // reach the pages that answer the question properly.
+  { label: 'Why', href: '/why/' },
   { label: 'CPUs', href: '/#cpus' },
-  { label: 'Install', href: '/#install' },
+  { label: 'Install', href: '/install/' },
   // Built from the assembler's own repo by the Pages workflow, so it describes
   // the released binary rather than this site's last deploy.
   { label: 'Docs', href: '/docs/' },
