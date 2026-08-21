@@ -90,23 +90,18 @@ jobs:
         run: npm ci
 
       # Built after the version is selected, so the site can state which release
-      # it documents. Before this reorder the Astro build ran first and the
-      # value was computed, used for the book, and thrown away.
+      # it documents, and so the documentation pages come from that release
+      # rather than from main.
+      #
+      # This one step now builds the whole site, documentation included. mdBook
+      # is withdrawn (`decisions/one-documentation-surface.md`): the pages under
+      # /docs/ are Astro routes rendering the markdown out of `_asm198x`, so
+      # there is no second build system, no second design, and no seam for a
+      # reader to cross.
       - name: Build site
         run: npm run build
         env:
           ASM198X_REF: ${{ steps.release.outputs.ref }}
-
-      - name: Install mdBook
-        uses: taiki-e/install-action@v2
-        with:
-          tool: mdbook
-
-      - name: Build the book into /docs/
-        run: |
-          mdbook build _asm198x/docs/book
-          mkdir -p dist/docs
-          cp -R _asm198x/docs/book/book/. dist/docs/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5

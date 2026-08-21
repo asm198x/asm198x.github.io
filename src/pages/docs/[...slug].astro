@@ -1,0 +1,167 @@
+---
+/**
+ * Every documentation page, rendered from the assembler's checkout.
+ *
+ * One surface: these are part of the site, not an artefact parked behind
+ * `/docs/` with its own design and its own navigation. The reader crosses no
+ * seam. See `decisions/one-documentation-surface.md` in the assembler repo.
+ */
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import DocsNav from '@components/DocsNav.astro';
+import { nav, ordered, sectionOf } from '@lib/docs';
+
+export async function getStaticPaths() {
+  const sections = nav();
+  if (!sections) return [];
+
+  const entries = await getCollection('docs');
+  const byId = new Map(entries.map((e) => [e.id, e]));
+  const pages = ordered(sections);
+
+  // The nav is gated in the assembler repo: `cargo xtask docs --check` fails
+  // when it lists a page that has no file. Reaching this means the checkout is
+  // older than the nav, or the gate was bypassed — either way, say which page
+  // and stop, rather than publishing navigation that 404s.
+  const missing = pages.filter((p) => !byId.has(p.slug)).map((p) => p.slug);
+  if (missing.length > 0) {
+    throw new Error(
+      `The nav lists ${missing.length} page(s) with no file in the checkout: ` +
+        `${missing.join(', ')}. The checkout is at a revision whose nav.json ` +
+        `does not match its pages.`,
+    );
+  }
+
+  return pages.map((page, i) => ({
+    params: { slug: page.slug },
+    props: {
+      entry: byId.get(page.slug)!,
+      title: page.title,
+      section: sectionOf(sections, page.slug),
+      prev: i > 0 ? pages[i - 1] : null,
+      next: i < pages.length - 1 ? pages[i + 1] : null,
+      sections,
+    },
+  }));
+}
+
+const { entry, title, section, prev, next, sections } = Astro.props;
+const { Content } = await render(entry);
+---
+
+<BaseLayout title={title}>
+  <div class="container docs">
+    <aside class="sidebar">
+      <DocsNav sections={sections} current={entry.id} />
+    </aside>
+
+    <article class="page">
+      {section && <p class="eyebrow">{section}</p>}
+      <div class="prose">
+        <Content />
+      </div>
+
+      <nav class="pager" aria-label="Page">
+        {
+          prev ? (
+            <a class="prev" href={`/docs/${prev.slug}/`}>
+              <span>Previous</span>
+              {prev.title}
+            </a>
+          ) : (
+            <span />
+          )
+        }
+        {
+          next && (
+            <a class="next" href={`/docs/${next.slug}/`}>
+              <span>Next</span>
+              {next.title}
+            </a>
+          )
+        }
+      </nav>
+    </article>
+  </div>
+</BaseLayout>
+
+<style>
+  .docs {
+    display: grid;
+    grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+    gap: 3rem;
+    align-items: start;
+    padding-top: 3rem;
+    padding-bottom: 4rem;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 2rem;
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
+  }
+
+  .page {
+    min-width: 0;
+  }
+
+  .eyebrow {
+    margin: 0 0 0.5rem;
+    font-family: var(--font-sans);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .pager {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .pager a {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    max-width: 45%;
+    color: var(--ink);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .pager .next {
+    text-align: right;
+  }
+
+  .pager span {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .pager a:hover {
+    color: var(--accent);
+  }
+
+  @media (max-width: 60rem) {
+    .docs {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2rem;
+    }
+
+    .sidebar {
+      position: static;
+      max-height: none;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--line);
+    }
+  }
+</style>

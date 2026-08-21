@@ -194,3 +194,117 @@ th {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Documentation prose.
+ *
+ * These rules are global rather than scoped to the docs page because Astro's
+ * scoping works on elements in a component's template, and markdown rendered
+ * through `<Content />` carries no scope attribute. Scoped rules would simply
+ * not apply.
+ *
+ * The instruction reference is the demanding case: sixty-odd `## MNEMONIC`
+ * headings per page, each followed by a six-column table. The rhythm below is
+ * tuned for scanning that — a heading you can find while scrolling fast, and
+ * tables that stay legible without becoming the whole page. */
+.prose {
+  font-family: var(--font-read);
+  line-height: 1.65;
+}
+
+.prose > :first-child {
+  margin-top: 0;
+}
+
+.prose h1 {
+  margin: 0 0 1.5rem;
+  font-family: var(--font-sans);
+  font-size: clamp(1.9rem, 1.4rem + 1.6vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+}
+
+.prose h2 {
+  margin: 3rem 0 1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-sans);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.prose h3 {
+  margin: 2rem 0 0.75rem;
+  font-family: var(--font-sans);
+  font-size: 1.08rem;
+  font-weight: 700;
+}
+
+.prose p,
+.prose li {
+  color: var(--ink-muted);
+}
+
+.prose p {
+  margin: 0 0 1.1rem;
+}
+
+.prose ul,
+.prose ol {
+  margin: 0 0 1.1rem;
+  padding-left: 1.35rem;
+}
+
+.prose li {
+  margin-bottom: 0.4rem;
+}
+
+.prose a {
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+  text-decoration-thickness: 1px;
+}
+
+.prose a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.prose :not(pre) > code {
+  border-radius: 4px;
+  padding: 0.12em 0.36em;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.9em;
+}
+
+.prose pre {
+  margin: 0 0 1.4rem;
+}
+
+.prose table {
+  margin: 0 0 1.4rem;
+}
+
+.prose blockquote {
+  margin: 0 0 1.4rem;
+  padding-left: 1rem;
+  border-left: 3px solid var(--line-strong);
+  color: var(--ink-soft);
+}
+
+.prose hr {
+  margin: 2.5rem 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+/* Narrow screens: let a wide table scroll inside itself rather than pushing
+ * the page sideways. Table layout is left alone everywhere it fits. */
+@media (max-width: 40rem) {
+  .prose table {
+    display: block;
+    overflow-x: auto;
+  }
+}

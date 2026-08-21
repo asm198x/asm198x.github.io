@@ -5,11 +5,12 @@
   "version": "0.0.1",
   "scripts": {
     "ui:fetch": "./scripts/fetch-ui.sh",
-    "predev": "npm run ui:fetch",
+    "predev": "npm run ui:fetch && npm run docs:fetch",
     "dev": "astro dev",
-    "prebuild": "npm run ui:fetch",
+    "prebuild": "npm run ui:fetch && npm run docs:fetch",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "docs:fetch": "./scripts/fetch-asm198x.sh"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",
