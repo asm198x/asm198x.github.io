@@ -1,0 +1,152 @@
+---
+/**
+ * The documentation contents.
+ *
+ * `/docs/` was mdBook's index and the header still links to it, so it stays a
+ * real page. It lists the sections rather than redirecting into the first one:
+ * with twenty-five pages, most of them a reference someone arrives at with a
+ * specific CPU in mind, a contents page answers "what is here" better than
+ * dropping the reader into the introduction.
+ *
+ * Built from the same generated nav as the sidebar, so it cannot list a page
+ * the sidebar does not.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { nav } from '@lib/docs';
+
+const sections = nav();
+---
+
+<BaseLayout
+  title="Documentation"
+  description="asm198x documentation — the command line, dialects, and the generated instruction reference for every supported CPU."
+>
+  <div class="container index">
+    <header>
+      <p class="eyebrow">Documentation</p>
+      <h1>Everything the binary can be asked to do.</h1>
+    </header>
+
+    {
+      sections ? (
+        <div class="sections">
+          {sections.map((section) => (
+            <section
+              class:list={{
+                wide: section.items.some((i) => i.children.length > 0),
+              }}
+            >
+              <h2>{section.title ?? 'Start here'}</h2>
+              <ul>
+                {section.items.map((item) => (
+                  <li>
+                    <a href={`/docs/${item.slug}/`}>{item.title}</a>
+                    {item.children.length > 0 && (
+                      <ul class="children">
+                        {item.children.map((child) => (
+                          <li>
+                            <a href={`/docs/${child.slug}/`}>{child.title}</a>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      ) : (
+        <p class="unavailable">
+          This build could not read the documentation from the release it
+          documents.
+        </p>
+      )
+    }
+  </div>
+</BaseLayout>
+
+<style>
+  .index {
+    padding-top: 3rem;
+    padding-bottom: 4rem;
+  }
+
+  h1 {
+    margin: 0 0 2.5rem;
+    font-size: clamp(1.9rem, 1.4rem + 1.6vw, 2.6rem);
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    line-height: 1.1;
+  }
+
+  /* Sections are wildly different sizes — one page, three, twenty-one — so a
+   * plain equal-column grid leaves most of the page empty. A section holding
+   * nested pages takes the full width and flows them into columns instead. */
+  .sections {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 2rem 2.5rem;
+    align-items: start;
+  }
+
+  .wide {
+    grid-column: 1 / -1;
+    margin-top: 1rem;
+  }
+
+  .wide .children {
+    columns: 4 12rem;
+    column-gap: 2.5rem;
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .wide .children li {
+    break-inside: avoid;
+  }
+
+  h2 {
+    margin: 0 0 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .children {
+    margin: 0.25rem 0 0.6rem 0.75rem;
+    padding-left: 0.75rem;
+    border-left: 1px solid var(--line);
+  }
+
+  a {
+    display: block;
+    padding: 0.28rem 0;
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .children a {
+    color: var(--ink-muted);
+    font-size: 0.93rem;
+  }
+
+  a:hover {
+    color: var(--accent);
+  }
+
+  .unavailable {
+    color: var(--ink-soft);
+  }
+</style>

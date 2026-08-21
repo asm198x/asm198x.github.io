@@ -1,0 +1,110 @@
+---
+/**
+ * The documentation sidebar, rendered from the generated nav.
+ *
+ * Ordering and hierarchy are authored in the assembler's SUMMARY.md. This
+ * component has no opinion about either — it draws what the nav says, which is
+ * what makes the two impossible to disagree.
+ */
+import type { NavSection } from '@lib/docs';
+
+interface Props {
+  sections: NavSection[];
+  current: string;
+}
+
+const { sections, current } = Astro.props;
+---
+
+<nav class="docs-nav" aria-label="Documentation">
+  {
+    sections.map((section) => (
+      <div class="group">
+        {section.title && <p class="group-title">{section.title}</p>}
+        <ul>
+          {section.items.map((item) => (
+            <li>
+              <a
+                href={`/docs/${item.slug}/`}
+                aria-current={item.slug === current ? 'page' : undefined}
+              >
+                {item.title}
+              </a>
+              {item.children.length > 0 && (
+                <ul class="children">
+                  {item.children.map((child) => (
+                    <li>
+                      <a
+                        href={`/docs/${child.slug}/`}
+                        aria-current={
+                          child.slug === current ? 'page' : undefined
+                        }
+                      >
+                        {child.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))
+  }
+</nav>
+
+<style>
+  .docs-nav {
+    font-size: 0.9rem;
+  }
+
+  .group + .group {
+    margin-top: 1.75rem;
+  }
+
+  .group-title {
+    margin: 0 0 0.5rem;
+    font-family: var(--font-sans);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .children {
+    margin: 0.25rem 0 0.5rem 0.75rem;
+    padding-left: 0.75rem;
+    border-left: 1px solid var(--line);
+  }
+
+  a {
+    display: block;
+    padding: 0.3rem 0;
+    color: var(--ink-muted);
+    text-decoration: none;
+    line-height: 1.35;
+  }
+
+  a:hover {
+    color: var(--accent);
+  }
+
+  a[aria-current='page'] {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+</style>
