@@ -5,6 +5,11 @@
  * One surface: these are part of the site, not an artefact parked behind
  * `/docs/` with its own design and its own navigation. The reader crosses no
  * seam. See `decisions/one-documentation-surface.md` in the assembler repo.
+ *
+ * A page's path under the book source is its URL — `reference/cli.md` is
+ * published at `/reference/cli/` — which is the layout the documentation plan
+ * specifies and leaves nothing to map. This is a root catch-all, so the static
+ * routes beside it (`/`, `/releases`, `/docs`) take precedence over it.
  */
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '@layouts/BaseLayout.astro';
@@ -64,7 +69,7 @@ const { Content } = await render(entry);
       <nav class="pager" aria-label="Page">
         {
           prev ? (
-            <a class="prev" href={`/docs/${prev.slug}/`}>
+            <a class="prev" href={`/${prev.slug}/`}>
               <span>Previous</span>
               {prev.title}
             </a>
@@ -74,7 +79,7 @@ const { Content } = await render(entry);
         }
         {
           next && (
-            <a class="next" href={`/docs/${next.slug}/`}>
+            <a class="next" href={`/${next.slug}/`}>
               <span>Next</span>
               {next.title}
             </a>

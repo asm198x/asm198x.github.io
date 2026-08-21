@@ -40,12 +40,12 @@ const sections = nav();
               <ul>
                 {section.items.map((item) => (
                   <li>
-                    <a href={`/docs/${item.slug}/`}>{item.title}</a>
+                    <a href={`/${item.slug}/`}>{item.title}</a>
                     {item.children.length > 0 && (
                       <ul class="children">
                         {item.children.map((child) => (
                           <li>
-                            <a href={`/docs/${child.slug}/`}>{child.title}</a>
+                            <a href={`/${child.slug}/`}>{child.title}</a>
                           </li>
                         ))}
                       </ul>
