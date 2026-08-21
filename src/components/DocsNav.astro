@@ -25,7 +25,7 @@ const { sections, current } = Astro.props;
           {section.items.map((item) => (
             <li>
               <a
-                href={`/docs/${item.slug}/`}
+                href={`/${item.slug}/`}
                 aria-current={item.slug === current ? 'page' : undefined}
               >
                 {item.title}
@@ -35,7 +35,7 @@ const { sections, current } = Astro.props;
                   {item.children.map((child) => (
                     <li>
                       <a
-                        href={`/docs/${child.slug}/`}
+                        href={`/${child.slug}/`}
                         aria-current={
                           child.slug === current ? 'page' : undefined
                         }
