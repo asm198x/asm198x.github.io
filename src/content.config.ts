@@ -14,6 +14,7 @@
  */
 import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
+import { readFileSync } from 'node:fs';
 
 const docs = defineCollection({
   loader: glob({
@@ -24,4 +25,78 @@ const docs = defineCollection({
   }),
 });
 
-export const collections = { docs };
+/**
+ * The release history, from the assembler's changelog.
+ *
+ * release-plz writes `crates/asm198x/CHANGELOG.md` in Keep a Changelog form,
+ * and it lives inside the package, so every release carries an up-to-date copy.
+ * That file is the only source: the page states what changed and nothing here
+ * restates it.
+ *
+ * This is a custom loader rather than a glob because the page wants one entry
+ * per release — to mark which one the site documents, and to link each to the
+ * comparison the changelog already names. Splitting a rendered blob afterwards
+ * would mean parsing HTML instead.
+ *
+ * Nothing in the assembler parses this file, so unlike the navigation there is
+ * no second parser here to drift from a first one.
+ */
+const CHANGELOG = '_asm198x/crates/asm198x/CHANGELOG.md';
+
+const releases = defineCollection({
+  loader: {
+    name: 'changelog',
+    load: async ({ store, renderMarkdown, logger }) => {
+      store.clear();
+
+      let text: string;
+      try {
+        text = readFileSync(CHANGELOG, 'utf8');
+      } catch {
+        logger.warn(
+          `no changelog at ${CHANGELOG} — the releases page will say so`,
+        );
+        return;
+      }
+
+      // `## [0.0.18](compare-url) - 2026-08-21`, or `## [Unreleased]`.
+      const heading = /^## \[([^\]]+)\](?:\(([^)]+)\))?(?:\s+-\s+(\S+))?\s*$/;
+      const lines = text.split('\n');
+      let current: { version: string; url?: string; date?: string } | null =
+        null;
+      let body: string[] = [];
+
+      const flush = async () => {
+        if (!current) return;
+        const markdown = body.join('\n').trim();
+        // An empty `## [Unreleased]` is release-plz's placeholder, not a
+        // release. Nothing shipped, so nothing to show.
+        if (!markdown) return;
+        store.set({
+          id: current.version,
+          data: {
+            version: current.version,
+            url: current.url ?? null,
+            date: current.date ?? null,
+          },
+          body: markdown,
+          rendered: await renderMarkdown(markdown),
+        });
+      };
+
+      for (const line of lines) {
+        const match = heading.exec(line);
+        if (match) {
+          await flush();
+          current = { version: match[1], url: match[2], date: match[3] };
+          body = [];
+        } else if (current) {
+          body.push(line);
+        }
+      }
+      await flush();
+    },
+  },
+});
+
+export const collections = { docs, releases };

@@ -21,6 +21,10 @@ const items = [
   // Built from the assembler's own repo by the Pages workflow, so it describes
   // the released binary rather than this site's last deploy.
   { label: 'Docs', href: '/docs/' },
+  // The version at the end of this nav is the natural place to link this from,
+  // but it lives in the shared component and only this site has the page.
+  // Revisit when another family site grows one.
+  { label: 'Releases', href: '/releases/' },
   { label: 'GitHub', href: 'https://github.com/asm198x' },
 ].map((item) => ({ ...item, current: item.label === current }));
 ---
