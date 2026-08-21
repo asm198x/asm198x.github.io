@@ -9,8 +9,10 @@ on:
   # the weekly run is the backstop for when nothing fires it.
   repository_dispatch:
     types: [docs-changed]
+  # Daily rather than weekly: this is the backstop for when nothing fires the
+  # dispatch above, and a week is a long time for a documentation fix to wait.
   schedule:
-    - cron: "0 6 * * 1"
+    - cron: "0 6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -74,10 +76,35 @@ jobs:
           done
           if [ -z "${ref}" ]; then
             echo "::notice::no release carries the book yet; building from main"
-            ref=$(git rev-parse HEAD)
+            ref=$(git rev-parse origin/main)
+            version="${ref}"
+          else
+            version="${ref}"
+            # Publish the newest documentation that still describes the released
+            # binary. See `decisions/one-documentation-surface.md`.
+            #
+            # Pinning to the tag satisfies the released-tag rule, but strictly
+            # than it requires: a documentation-only change touches no package
+            # directory, so release-plz opens no release PR, so prose could not
+            # reach a reader without a release cut by hand.
+            #
+            # When the code has not moved since the release, `main` and the tag
+            # produce identical generated pages, so building from `main` cannot
+            # describe a binary nobody has. When it has moved, the tag wins.
+            #
+            # `xtask` is in the comparison because it generates those pages, and
+            # the manifests because they carry the version.
+            if git diff --quiet "${ref}" origin/main -- crates xtask Cargo.toml Cargo.lock; then
+              echo "::notice::code unchanged since ${ref}; publishing documentation from main"
+              ref=$(git rev-parse origin/main)
+            else
+              echo "::notice::code has moved since ${ref}; publishing its documentation until the next release"
+            fi
           fi
           git checkout --quiet "${ref}"
-          echo "ref=${ref}" >> "$GITHUB_OUTPUT"
+          # The label names the release these pages describe, which is not
+          # always the revision they were built from.
+          echo "ref=${version}" >> "$GITHUB_OUTPUT"
           echo "Building the book from ${ref}"
 
       - name: Set up Node
