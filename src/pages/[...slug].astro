@@ -14,6 +14,7 @@
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '@layouts/BaseLayout.astro';
 import DocsNav from '@components/DocsNav.astro';
+import DocsSearch from '@components/DocsSearch.astro';
 import { nav, ordered, sectionOf } from '@lib/docs';
 
 export async function getStaticPaths() {
@@ -57,6 +58,7 @@ const { Content } = await render(entry);
 <BaseLayout title={title}>
   <div class="container docs">
     <aside class="sidebar">
+      <DocsSearch />
       <DocsNav sections={sections} current={entry.id} />
     </aside>
 

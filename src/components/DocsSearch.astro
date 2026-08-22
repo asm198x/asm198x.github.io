@@ -1,0 +1,252 @@
+---
+/**
+ * The documentation search box.
+ *
+ * Filters the generated index in the browser. There is no server and no search
+ * service: the index is 1,177 headings, so matching them is a loop, and the
+ * simplest thing that answers "where is SBC" is the right amount of machinery.
+ *
+ * The index is fetched on first use rather than inlined, so a reader who never
+ * searches never downloads it.
+ */
+---
+
+<div class="docs-search" data-docs-search>
+  <label class="visually-hidden" for="docs-search-input">Search the documentation</label>
+  <input
+    id="docs-search-input"
+    type="search"
+    placeholder="Search — try SBC, or include"
+    autocomplete="off"
+    spellcheck="false"
+    role="combobox"
+    aria-expanded="false"
+    aria-controls="docs-search-results"
+  />
+  <ul id="docs-search-results" class="results" role="listbox" hidden></ul>
+</div>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-docs-search]');
+  const input = root?.querySelector<HTMLInputElement>('input');
+  const list = root?.querySelector<HTMLUListElement>('.results');
+  if (root && input && list) {
+    interface Entry {
+      slug: string;
+      page: string;
+      heading?: string;
+      context?: string;
+    }
+
+    let entries: Entry[] | null = null;
+    let loading: Promise<void> | null = null;
+
+    const load = () => {
+      if (loading) return loading;
+      loading = fetch('/docs-search.json')
+        .then((r) => r.json())
+        .then((d: { entries: Entry[] }) => {
+          entries = d.entries;
+        })
+        .catch(() => {
+          entries = [];
+        });
+      return loading;
+    };
+
+    // An exact heading beats a prefix, which beats a match anywhere. Someone
+    // typing "SBC" wants the SBC sections, not every line that mentions one.
+    const rank = (entry: Entry, needle: string): number => {
+      const heading = (entry.heading ?? entry.page).toLowerCase();
+      if (heading === needle) return 0;
+      if (heading.startsWith(needle)) return 1;
+      if (heading.includes(needle)) return 2;
+      if ((entry.context ?? '').toLowerCase().includes(needle)) return 3;
+      if (entry.page.toLowerCase().includes(needle)) return 4;
+      // The URL last, so a page whose title says it differently is still
+      // findable: "Where we differ" lives at /divergences, and someone
+      // searching for the word the page is about should not come up empty.
+      if (entry.slug.toLowerCase().includes(needle)) return 5;
+      return -1;
+    };
+
+    const render = () => {
+      const needle = input.value.trim().toLowerCase();
+      if (!needle || !entries) {
+        list.hidden = true;
+        list.innerHTML = '';
+        input.setAttribute('aria-expanded', 'false');
+        return;
+      }
+      const hits = entries
+        .map((entry) => ({ entry, score: rank(entry, needle) }))
+        .filter((hit) => hit.score >= 0)
+        .sort((a, b) => a.score - b.score)
+        .slice(0, 12);
+
+      list.innerHTML = '';
+      if (hits.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'empty';
+        li.textContent = `Nothing matches "${input.value.trim()}"`;
+        list.append(li);
+      } else {
+        for (const { entry } of hits) {
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = entry.heading
+            ? `/${entry.slug}/#${entry.heading
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-|-$/g, '')}`
+            : `/${entry.slug}/`;
+          const title = document.createElement('span');
+          const text = entry.heading ?? entry.page;
+          // Monospace for a mnemonic, the page's own type for a sentence.
+          // `SBC` wants to look like code; "Where a relative include is looked
+          // for" does not.
+          const mnemonic = /^[A-Z0-9.!_-]{1,10}$/.test(text);
+          title.className = mnemonic ? 'hit-title mnemonic' : 'hit-title';
+          title.textContent = text;
+          a.append(title);
+          const where = document.createElement('span');
+          where.className = 'hit-where';
+          // Page *and* context: the Z80 page carries three `## SBC` headings
+          // (base, IX, IY), and the description is the only thing that tells
+          // them apart in a list.
+          where.textContent = entry.heading
+            ? [entry.page, entry.context].filter(Boolean).join(' — ')
+            : (entry.context ?? '');
+          a.append(where);
+          li.append(a);
+          list.append(li);
+        }
+      }
+      list.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+    };
+
+    input.addEventListener('focus', () => void load().then(render));
+    input.addEventListener('input', () => void load().then(render));
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        input.value = '';
+        render();
+        input.blur();
+      }
+      if (event.key === 'Enter') {
+        const first = list.querySelector<HTMLAnchorElement>('a');
+        if (first) {
+          event.preventDefault();
+          first.click();
+        }
+      }
+    });
+    document.addEventListener('click', (event) => {
+      if (!root.contains(event.target as Node)) {
+        list.hidden = true;
+        input.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+</script>
+
+<!--
+  `is:global`, and every rule namespaced under `.docs-search`.
+
+  The results are created by the script above, so they never carry the
+  `data-astro-cid-*` attribute Astro adds at build time — and a scoped rule
+  silently does not apply to them. The first build of this looked fine in the
+  markup and rendered the title and its page run together as one underlined
+  link, because `display: block` and `text-decoration: none` were both dropped.
+-->
+<style is:global>
+  .docs-search {
+    position: relative;
+    margin-bottom: 1.75rem;
+  }
+
+  .docs-search input {
+    width: 100%;
+    padding: 0.5rem 0.65rem;
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+
+  .docs-search input::placeholder {
+    color: var(--ink-soft);
+  }
+
+  .docs-search input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: transparent;
+  }
+
+  .docs-search .results {
+    position: absolute;
+    z-index: 20;
+    inset-inline: 0;
+    margin: 0.35rem 0 0;
+    padding: 0.25rem;
+    list-style: none;
+    max-height: 60vh;
+    overflow-y: auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: var(--shadow-sm, 0 6px 20px rgb(0 0 0 / 12%));
+  }
+
+  .docs-search .results a {
+    display: block;
+    padding: 0.4rem 0.5rem;
+    border-radius: 3px;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .docs-search .results a:hover,
+  .docs-search .results a:focus-visible {
+    background: var(--accent-soft);
+  }
+
+  .docs-search .hit-title {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    color: var(--ink);
+  }
+
+  .docs-search .hit-title.mnemonic {
+    font-family: var(--font-mono);
+  }
+
+  .docs-search .hit-where {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .docs-search .empty {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+  }
+
+  .docs-search .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+</style>
