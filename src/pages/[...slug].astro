@@ -16,6 +16,7 @@ import BaseLayout from '@layouts/BaseLayout.astro';
 import DocsNav from '@components/DocsNav.astro';
 import DocsSearch from '@components/DocsSearch.astro';
 import { nav, ordered, sectionOf } from '@lib/docs';
+import { searchIndex } from '@lib/search';
 
 export async function getStaticPaths() {
   const sections = nav();
@@ -52,13 +53,23 @@ export async function getStaticPaths() {
 }
 
 const { entry, title, section, prev, next, sections } = Astro.props;
+
+const hasSearch = (searchIndex() ?? []).length > 0;
 const { Content } = await render(entry);
 ---
 
 <BaseLayout title={title}>
   <div class="container docs">
     <aside class="sidebar">
-      <DocsSearch />
+      {
+        /*
+         * Only when there is something to search. A release predating the
+         * index builds without one, and a box that answers "Nothing matches"
+         * to every query reads as a broken search rather than an absent one —
+         * which is worse than no box at all.
+         */
+      }
+      {hasSearch && <DocsSearch />}
       <DocsNav sections={sections} current={entry.id} />
     </aside>
 
