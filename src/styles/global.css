@@ -6,7 +6,11 @@
 
   --ink: var(--h-ink);
   --ink-muted: var(--h-ink-muted);
-  --ink-soft: var(--h-ink-faint);
+  /* Every --ink-soft use on this site is text — the copyright line, eyebrows,
+   * group titles, release dates and headings — and --h-ink-faint is decorative
+   * only (2.27:1). So the site's third ink tier collapses onto the muted tone;
+   * the family palette carries two text tiers, not three. */
+  --ink-soft: var(--h-ink-muted);
   --paper: var(--h-page);
   --paper-strong: var(--h-page);
   --panel: var(--h-ground);
@@ -28,6 +32,31 @@
   --font-sans: var(--h-font-ui);
   --font-read: var(--h-font-read);
   --font-mono: var(--h-font-mono);
+  /* Text on an accent fill. White holds on the light-mode accent at 5.11:1;
+   * on the brightened dark-mode accent it drops to 3.10:1, where the page ink
+   * gives 5.75:1 instead. */
+  --ink-on-accent: #ffffff;
+}
+
+/* --h-accent-deep is the accent darkened for a light ground; on a dark one it
+ * is the wrong end of the pair. Accent text set in it measures 3.95:1 on the
+ * page and 3.43:1 on the inline-code ground. The tokens brighten --h-accent
+ * for dark mode, so the "strong" role swaps to that: 5.75:1 and 5.00:1.
+ * Both selectors are needed: the media query covers viewers who have expressed
+ * no preference, the attribute covers an explicit choice if this site grows the
+ * toggle the family palette already supports. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --accent-strong: var(--h-accent);
+    --signal: var(--h-accent);
+    --ink-on-accent: var(--h-page);
+  }
+}
+
+:root[data-theme="dark"] {
+  --accent-strong: var(--h-accent);
+  --signal: var(--h-accent);
+  --ink-on-accent: var(--h-page);
 }
 
 * {
