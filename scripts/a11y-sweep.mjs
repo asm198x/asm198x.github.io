@@ -76,6 +76,16 @@ await new Promise((resolve) => server.listen(0, resolve));
 const base = `http://localhost:${server.address().port}`;
 
 const ALL = routes(DIST).sort();
+
+// Zero pages is not a clean sweep. Without this the gate reports success
+// having measured nothing — the same silent-skip failure it exists to catch,
+// relocated into the catcher.
+if (ALL.length === 0) {
+  console.error(`a11y: found no pages under ${DIST} — run \`npm run build\` first`);
+  server.close();
+  process.exit(1);
+}
+
 const findings = new Map();
 const skipped = [];
 
