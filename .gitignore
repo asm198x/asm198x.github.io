@@ -8,3 +8,5 @@ _198x-ui/
 # The assembler checkout the parity figures and the book are read from. CI
 # makes it with actions/checkout; locally it is a symlink or a clone.
 _asm198x/
+# Copied out of the kit by scripts/fetch-ui.sh.
+public/fonts/
