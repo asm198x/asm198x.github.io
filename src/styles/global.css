@@ -20,10 +20,20 @@
   /* The accent that is readable on the current theme's ground. The kit
    * swaps it; this site used to carry its own copy of that swap. */
   --accent-strong: var(--h-accent-ink);
-  /* 9%, not 12%: on the §3b-tinted dark ground a 12% chip composited to
-   * #322d20, where --h-accent-ink measures 4.41:1 behind inline code. A weaker
-   * mix sits closer to the page and the accent clears. */
-  --accent-soft: color-mix(in oklab, var(--h-accent) 9%, var(--h-page));
+  /* The chip is mixed into --h-page, which the §3b tint brightens by 20% of
+   * the project colour, so its lightness -- and the contrast --h-accent-ink
+   * has against it -- moves whenever that colour changes. v0.5.0 brightened
+   * the palette and the 9% chip fell to 4.32:1 against a 4.5:1 floor, failing
+   * the sweep on <code> across 56 routes and on p.badge. It has been 12%
+   * (chip #322d20, 4.41:1 behind inline code) and 9% before that.
+   *
+   * 4% is not the smallest passing value; it is the one that restores the
+   * 4.64:1 this site had at v0.3.0, leaving headroom for the next palette
+   * change instead of sitting on the floor. The ceiling is low -- even a 0%
+   * chip only reaches 4.87:1, because the tinted page is close to the accent
+   * in lightness. If a future change cannot clear AA at any mix, the accent
+   * text colour has to move, not this. */
+  --accent-soft: color-mix(in oklab, var(--h-accent) 4%, var(--h-page));
   --signal: var(--h-accent-ink);
   --code-bg: var(--h-code-bg);
   --code-ink: var(--h-code-ink);
