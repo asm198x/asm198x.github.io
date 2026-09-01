@@ -150,6 +150,75 @@ const crates = [
       </header>
     </section>
 
+
+    <section id="convert" class="container convert" aria-label="Dialect conversion">
+      <header class="section-head">
+        <p class="eyebrow">Convert</p>
+        <h2>Move source between dialects, with proof.</h2>
+        <p class="section-lede">
+          Decades of code is written for one assembler's dialect. Because
+          Asm198x parses many dialects of a CPU into one source-preserving
+          tree, it can re-emit a program in a different one &mdash; labels,
+          names, and comments intact. The conversion
+          is <strong>self-verifying</strong>: it assembles the input under the
+          source dialect and the output under the target dialect, and emits
+          nothing unless the two images are byte-identical. What you see below
+          is real output, and the same check also holds under real pasmo and
+          real sjasmplus.
+        </p>
+      </header>
+      <div class="convert-grid">
+        <div class="terminal" aria-label="A pasmo program before conversion">
+          <div class="terminal-bar" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <pre><code><span class="c"># wipe.asm — pasmo</span>
+        org 8000h
+COUNT   equ 6
+
+<span class="c">; fill the top third of the screen</span>
+start:  ld hl, 4000h
+        ld b, COUNT
+wipe:   ld (hl), 0
+        inc hl
+        djnz wipe
+        rept 2
+        halt
+        endm
+        ret</code></pre>
+        </div>
+        <div class="terminal" aria-label="The same program converted to sjasmplus">
+          <div class="terminal-bar" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <pre><code><span class="c">$</span> asm198x convert --from pasmo --to sjasmplus wipe.asm
+        org 8000h
+COUNT: equ 6
+<span class="c">; fill the top third of the screen</span>
+start:
+        ld hl, 4000h
+        ld b, COUNT
+wipe:
+        ld (hl), 0
+        inc hl
+        djnz wipe
+        rept 2
+        halt
+        <span class="hl">endr</span>
+        ret
+<span class="c">converted wipe.asm (pasmo -> sjasmplus, verified byte-identical)</span></code></pre>
+        </div>
+      </div>
+      <p class="convert-note">
+        The detail worth noticing: pasmo closes a <code>REPT</code> with <code>ENDM</code> &mdash;
+        the same word that closes a macro &mdash; and sjasmplus refuses that, so the
+        converter rewrites the repetition's closer and leaves a macro's <code>ENDM</code> alone.
+        A conversion it cannot prove is a reported error, never plausible-looking output.
+        Today it converts pasmo and pasmonext source to sjasmplus; <a href="https://github.com/asm198x/asm198x/issues/502">more pairs are tracked</a>.
+        See <a href="/docs/reference/cli/">the CLI reference</a>.
+      </p>
+    </section>
+
     <section id="cpus" class="container cpus" aria-label="CPU coverage">
       <p class="eyebrow">The CPU surface</p>
       <h2>Broad 8- and 16-bit coverage, today.</h2>
@@ -373,8 +442,30 @@ cd asm198x && cargo build --release</code></pre>
 
   .why,
   .cpus,
+  .convert,
   .front-doors {
     padding-top: 4.5rem;
+  }
+
+  .convert-grid {
+    margin-top: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  .convert-note {
+    margin-top: 1.25rem;
+    max-width: 760px;
+    line-height: 1.55;
+  }
+
+  .terminal .hl {
+    color: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   .section-head h2,
