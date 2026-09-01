@@ -172,48 +172,49 @@ const crates = [
           <div class="terminal-bar" aria-hidden="true">
             <span></span><span></span><span></span>
           </div>
-          <pre><code><span class="c"># wipe.asm — pasmo</span>
+          <pre><code><span class="c"># flash.asm — pasmo</span>
         org 8000h
-COUNT   equ 6
 
-<span class="c">; fill the top third of the screen</span>
-start:  ld hl, 4000h
-        ld b, COUNT
-wipe:   ld (hl), 0
-        inc hl
-        djnz wipe
-        rept 2
+border  macro colour
+        ld a, colour
+        out (0feh), a
+        <span class="hl">endm</span>
+
+<span class="c">; flash the border, then rest</span>
+start:  border 2
+        rept 8
         halt
-        endm
+        <span class="hl">endm</span>
+        border 5
         ret</code></pre>
         </div>
         <div class="terminal" aria-label="The same program converted to sjasmplus">
           <div class="terminal-bar" aria-hidden="true">
             <span></span><span></span><span></span>
           </div>
-          <pre><code><span class="c">$</span> asm198x convert --from pasmo --to sjasmplus wipe.asm
+          <pre><code><span class="c">$</span> asm198x convert --from pasmo --to sjasmplus flash.asm
         org 8000h
-COUNT: equ 6
-<span class="c">; fill the top third of the screen</span>
-start:
-        ld hl, 4000h
-        ld b, COUNT
-wipe:
-        ld (hl), 0
-        inc hl
-        djnz wipe
-        rept 2
+border  macro colour
+        ld a, colour
+        out (0feh), a
+        <span class="hl">endm</span>
+<span class="c">; flash the border, then rest</span>
+start:  border 2
+        rept 8
         halt
         <span class="hl">endr</span>
+        border 5
         ret
-<span class="c">converted wipe.asm (pasmo -> sjasmplus, verified byte-identical)</span></code></pre>
+<span class="c">converted flash.asm (pasmo -> sjasmplus, verified byte-identical)</span></code></pre>
         </div>
       </div>
       <p class="convert-note">
-        The detail worth noticing: pasmo closes a <code>REPT</code> with <code>ENDM</code> &mdash;
-        the same word that closes a macro &mdash; and sjasmplus refuses that, so the
-        converter rewrites the repetition's closer and leaves a macro's <code>ENDM</code> alone.
-        A conversion it cannot prove is a reported error, never plausible-looking output.
+        Look at the two highlighted <code>ENDM</code>s: the same word, twice.
+        One closes a macro, one closes a <code>REPT</code> &mdash; and sjasmplus refuses
+        that second spelling, so the converter rewrites the repetition's closer
+        to <code>ENDR</code> and leaves the macro's alone. That is a decision made from
+        the program's structure, not a search-and-replace &mdash; and if it ever gets
+        one wrong, the byte-compare refuses to emit anything at all.
         Today it converts pasmo and pasmonext source to sjasmplus; <a href="https://github.com/asm198x/asm198x/issues/502">more pairs are tracked</a>.
         See <a href="/docs/reference/cli/">the CLI reference</a>.
       </p>
