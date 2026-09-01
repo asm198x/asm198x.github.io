@@ -74,19 +74,19 @@ const frontDoors = [
 
 const crates = [
   {
-    name: 'isa',
-    role: 'Dependency-free declarative instruction-set specs — the single source of truth for encoding.',
-    href: 'https://github.com/asm198x/asm198x/tree/main/crates/isa',
+    name: 'isa198x',
+    role: 'Dependency-free declarative instruction-set specs — the encoding truth Asm198x and Emu198x share, now a neutral sibling project.',
+    href: 'https://github.com/isa198x/isa198x/tree/main/crates/isa',
   },
   {
-    name: 'isa-disasm',
-    role: 'Spec-driven disassemblers that decode against isa without pulling in the assembler.',
-    href: 'https://github.com/asm198x/asm198x/tree/main/crates/isa-disasm',
+    name: 'isa198x-disasm',
+    role: 'Spec-driven disassemblers that decode against isa198x without pulling in the assembler.',
+    href: 'https://github.com/isa198x/isa198x/tree/main/crates/isa-disasm',
   },
   {
     name: 'debug198x',
-    role: 'A cross-CPU debug-info sidecar: line and address maps, typed symbols, and sections.',
-    href: 'https://github.com/asm198x/asm198x/tree/main/crates/debug198x',
+    role: 'A cross-CPU debug-info sidecar — the assembler writes it, Emu198x reads it, and neither end owns the format.',
+    href: 'https://github.com/debug198x/debug198x',
   },
   {
     name: 'asm198x',
@@ -257,7 +257,11 @@ wipe:
             The <strong>engine ↔ dialect ↔ spec</strong> seam is what lets one
             binary span many CPUs and dialects: a dialect is a front-end module,
             a CPU is a spec, and the disassembler decodes against the same specs
-            the assembler emits from.
+            the assembler emits from. Three of the boundaries proved real
+            enough to leave the building: the specs and the debug format now
+            live in sibling projects &mdash; Isa198x and Debug198x &mdash;
+            because Emu198x consumes them too, and a thing two tools share is
+            owned by neither.
           </p>
         </header>
         <div class="tool-grid">
