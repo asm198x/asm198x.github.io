@@ -177,14 +177,14 @@ const version = documentedVersion();
       status.textContent = result.length === 1 ? '1 error' : `${result.length} errors`;
       bytesOut.textContent = '(no bytes)';
       symbolsOut.textContent = '(none)';
-      listingOut.textContent = '';
+      listingOut.textContent = '(no listing)';
       return;
     }
     const bytes: number[] = result.bytes;
     const origin: number | null = result.origin ?? null;
     bytesOut.textContent = hexdump(bytes, origin);
     symbolsOut.textContent = symbolTable(result.symbols ?? {});
-    listingOut.textContent = wasm.listing(name, text) ?? '';
+    listingOut.textContent = wasm.listing(name, text) || '(no listing)';
     for (const w of result.warnings ?? []) message('warning', w.message ?? String(w), w.line);
     const where = origin === null ? '' : ` at $${origin.toString(16).toUpperCase().padStart(4, '0')}`;
     const n = bytes.length;
