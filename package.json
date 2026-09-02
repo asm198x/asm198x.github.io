@@ -5,12 +5,13 @@
   "version": "0.0.1",
   "scripts": {
     "ui:fetch": "./scripts/fetch-ui.sh",
-    "predev": "npm run ui:fetch && npm run docs:fetch",
+    "predev": "npm run ui:fetch && npm run docs:fetch && npm run wasm:build",
     "dev": "astro dev",
-    "prebuild": "npm run ui:fetch && npm run docs:fetch",
+    "prebuild": "npm run ui:fetch && npm run docs:fetch && npm run wasm:build",
     "build": "astro build",
     "preview": "astro preview",
     "docs:fetch": "./scripts/fetch-asm198x.sh",
+    "wasm:build": "./scripts/fetch-wasm.sh",
     "a11y": "node scripts/a11y-sweep.mjs"
   },
   "dependencies": {
