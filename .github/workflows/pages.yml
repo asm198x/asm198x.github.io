@@ -107,6 +107,34 @@ jobs:
           echo "ref=${version}" >> "$GITHUB_OUTPUT"
           echo "Building the book from ${ref}"
 
+      # The playground is the assembler compiled to WebAssembly, built out of
+      # the checkout selected above so the module in the tab is the release
+      # the pages describe. scripts/fetch-wasm.sh does the build during
+      # `npm run build`; these steps give it the toolchain. The Rust version
+      # is the assembler's own pin, read from its checkout.
+      - name: Read the assembler's pinned toolchain
+        id: rust
+        working-directory: _asm198x
+        run: |
+          channel=$(awk -F'"' '/^channel/{print $2}' rust-toolchain.toml)
+          echo "channel=${channel}" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.rust.outputs.channel }}
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: _asm198x/crates/asm198x-web -> target
+
+      - name: Install wasm-pack
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack
+
       - name: Set up Node
         uses: actions/setup-node@v6
         with:

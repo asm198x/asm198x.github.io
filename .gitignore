@@ -10,3 +10,5 @@ _198x-ui/
 _asm198x/
 # Copied out of the kit by scripts/fetch-ui.sh.
 public/fonts/
+# The assembler's browser module, built out of _asm198x by scripts/fetch-wasm.sh.
+public/playground/

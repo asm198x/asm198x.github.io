@@ -1,0 +1,405 @@
+---
+/**
+ * The assembler, in the tab.
+ *
+ * The page is static; the work happens in the visitor's browser. At load it
+ * imports /playground/asm198x_web.js — the assembler compiled to WebAssembly
+ * by scripts/fetch-wasm.sh out of the same checkout the documentation is read
+ * from — and assembles the editor's contents on every keystroke. Nothing is
+ * sent anywhere.
+ *
+ * What comes back is the CLI's own JSON (`--message-format=json`), so the
+ * panels here render the shape /docs/cli/ documents rather than one invented
+ * for the page.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { documentedVersion } from '@lib/version';
+
+const version = documentedVersion();
+---
+
+<BaseLayout
+  title="Playground"
+  description="Assemble 6502, Z80, 68000 and more in the browser — the asm198x assembler compiled to WebAssembly, with the bytes, listing and diagnostics as you type."
+>
+  <div class="container playground">
+    <header>
+      <p class="eyebrow">Playground</p>
+      <h1>Assemble in the tab.</h1>
+      <p class="lede">
+        The same assembler as the binary{version ? ` (${version})` : ''}, compiled
+        to WebAssembly and running here. Pick a dialect, type, and the bytes
+        appear as you go. Nothing leaves your browser.
+      </p>
+    </header>
+
+    <div class="workbench">
+      <div class="editor">
+        <div class="toolbar">
+          <label>
+            <span>Dialect</span>
+            <select id="dialect" disabled>
+              <option>Loading…</option>
+            </select>
+          </label>
+          <p id="status" class="status" role="status" aria-live="polite">Loading the assembler…</p>
+        </div>
+        <label class="source-label" for="source">Source</label>
+        <textarea
+          id="source"
+          spellcheck="false"
+          autocomplete="off"
+          autocapitalize="off"
+          rows="18"
+          disabled
+        ></textarea>
+      </div>
+
+      <div class="results">
+        <section aria-labelledby="bytes-heading">
+          <h2 id="bytes-heading">Bytes</h2>
+          <pre id="bytes"><code></code></pre>
+        </section>
+        <section aria-labelledby="messages-heading">
+          <h2 id="messages-heading">Messages</h2>
+          <ul id="messages" class="messages"></ul>
+        </section>
+        <section aria-labelledby="symbols-heading">
+          <h2 id="symbols-heading">Symbols</h2>
+          <pre id="symbols"><code></code></pre>
+        </section>
+        <section class="wide" aria-labelledby="listing-heading">
+          <h2 id="listing-heading">Listing</h2>
+          <pre id="listing"><code></code></pre>
+        </section>
+      </div>
+    </div>
+
+    <p class="note">
+      One source file per run: an <code>include</code> reports a missing file.
+      The Spectrum Next's Z80N is <code>pasmonext</code> here; the CLI's
+      <code>--cpu</code> switch is not exposed yet. For anything bigger,{' '}
+      <a href="/install/">install the binary</a>.
+    </p>
+  </div>
+</BaseLayout>
+
+<script>
+  // The module is a runtime import from /playground/, not a bundled one: it
+  // is built out of the assembler checkout at build time and may be absent
+  // (an older release, or a local build without wasm-pack). Its absence is a
+  // message on the page, not a broken build.
+  type Wasm = {
+    default: () => Promise<unknown>;
+    assemble: (dialect: string, source: string) => string | undefined;
+    listing: (dialect: string, source: string) => string | undefined;
+    dialects: () => string;
+  };
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const dialect = $<HTMLSelectElement>('dialect');
+  const source = $<HTMLTextAreaElement>('source');
+  const status = $<HTMLParagraphElement>('status');
+  const bytesOut = $<HTMLElement>('bytes').firstElementChild as HTMLElement;
+  const symbolsOut = $<HTMLElement>('symbols').firstElementChild as HTMLElement;
+  const listingOut = $<HTMLElement>('listing').firstElementChild as HTMLElement;
+  const messages = $<HTMLUListElement>('messages');
+
+  // A starter program per dialect the page knows a first line for. Anything
+  // else opens with a comment, in that dialect's comment syntax where it
+  // differs. These swap in only while the editor still holds a starter, so a
+  // visitor's own text survives a dialect change.
+  const starters: Record<string, string> = {
+    acme: '; C64: border colour\n\t\t*= $c000\n\t\tlda #$00\n\t\tsta $d020\n\t\trts\n',
+    ca65: '; NES: a minimal ROM the linker fills out\n.segment "CODE"\nreset:\n\tsei\n\tcld\n\tldx #$ff\n\ttxs\nforever:\n\tjmp forever\n.segment "VECTORS"\n\t.word 0, reset, 0\n',
+    sjasmplus: '; ZX Spectrum: border colour\n\torg 32768\n\tld a,2\n\tout (254),a\n\tret\n',
+    pasmo: '; ZX Spectrum: border colour\n\torg 32768\n\tld a,2\n\tout (254),a\n\tret\n',
+    pasmonext: '; ZX Spectrum Next: 16-bit multiply\n\torg 32768\n\tld d,6\n\tld e,7\n\tmul d,e\n\tret\n',
+    vasm: '; Amiga: exit cleanly\n\tsection code,code\nstart:\n\tmoveq\t#0,d0\n\trts\n',
+    lwasm: '; Dragon / CoCo: clear a byte\n\t\torg\t$1000\n\t\tclr\t$0400\n\t\trts\n',
+    rgbasm: '; Game Boy\nSECTION "code", ROM0[$150]\n\tnop\n\tjp $150\n',
+    '8080': '; Intel 8080\n\torg 100h\n\tmvi a,1\n\tret\n',
+  };
+  const seen = new Set(Object.values(starters));
+  const starterFor = (name: string) => starters[name] ?? `; ${name}\n`;
+
+  // A linked ROM (ca65's .nes) runs to tens of kilobytes, mostly padding;
+  // the dump shows the head and says how much it is not showing.
+  const DUMP_LIMIT = 4096;
+
+  function hexdump(bytes: number[], origin: number | null): string {
+    if (bytes.length === 0) return '(no bytes)';
+    const base = origin ?? 0;
+    const width = base + bytes.length > 0xffff ? 6 : 4;
+    const rows: string[] = [];
+    const shown = Math.min(bytes.length, DUMP_LIMIT);
+    for (let i = 0; i < shown; i += 16) {
+      const addr = (base + i).toString(16).toUpperCase().padStart(width, '0');
+      const hex = bytes
+        .slice(i, i + 16)
+        .map((b) => b.toString(16).toUpperCase().padStart(2, '0'))
+        .join(' ');
+      rows.push(`${addr}  ${hex}`);
+    }
+    if (shown < bytes.length) rows.push(`… ${bytes.length - shown} more bytes`);
+    return rows.join('\n');
+  }
+
+  function symbolTable(symbols: Record<string, number>): string {
+    const names = Object.keys(symbols);
+    if (names.length === 0) return '(none)';
+    const pad = Math.max(...names.map((n) => n.length));
+    return names
+      .map((n) => `${n.padEnd(pad)}  $${symbols[n].toString(16).toUpperCase().padStart(4, '0')}`)
+      .join('\n');
+  }
+
+  function message(kind: string, text: string, line?: number) {
+    const li = document.createElement('li');
+    li.className = kind;
+    li.textContent = line ? `line ${line}: ${text}` : text;
+    messages.append(li);
+  }
+
+  function run(wasm: Wasm) {
+    const name = dialect.value;
+    const text = source.value;
+    messages.replaceChildren();
+    const json = wasm.assemble(name, text);
+    if (json === undefined) {
+      status.textContent = `Unknown dialect ${name}.`;
+      return;
+    }
+    const result = JSON.parse(json);
+    if (Array.isArray(result)) {
+      // The diagnostics array: today one fatal error.
+      for (const d of result) message('error', d.message, d.span?.line);
+      status.textContent = result.length === 1 ? '1 error' : `${result.length} errors`;
+      bytesOut.textContent = '(no bytes)';
+      symbolsOut.textContent = '(none)';
+      listingOut.textContent = '';
+      return;
+    }
+    const bytes: number[] = result.bytes;
+    const origin: number | null = result.origin ?? null;
+    bytesOut.textContent = hexdump(bytes, origin);
+    symbolsOut.textContent = symbolTable(result.symbols ?? {});
+    listingOut.textContent = wasm.listing(name, text) ?? '';
+    for (const w of result.warnings ?? []) message('warning', w.message ?? String(w), w.line);
+    const where = origin === null ? '' : ` at $${origin.toString(16).toUpperCase().padStart(4, '0')}`;
+    const n = bytes.length;
+    const warned = result.warnings?.length ? `, ${result.warnings.length} warning${result.warnings.length === 1 ? '' : 's'}` : '';
+    status.textContent = `${n} byte${n === 1 ? '' : 's'}${where}${warned}`;
+  }
+
+  async function start() {
+    let wasm: Wasm;
+    try {
+      wasm = (await import(/* @vite-ignore */ '/playground/asm198x_web.js')) as Wasm;
+      await wasm.default();
+    } catch {
+      status.textContent =
+        'The playground is unavailable in this build of the site — the assembler module did not load.';
+      return;
+    }
+
+    const table: { name: string; blurb: string }[] = JSON.parse(wasm.dialects());
+    dialect.replaceChildren(
+      ...table.map((d) => {
+        const option = document.createElement('option');
+        option.value = d.name;
+        option.textContent = `${d.name} — ${d.blurb}`;
+        return option;
+      }),
+    );
+    dialect.value = 'sjasmplus';
+    source.value = starterFor(dialect.value);
+    dialect.disabled = false;
+    source.disabled = false;
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const schedule = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => run(wasm), 120);
+    };
+    source.addEventListener('input', schedule);
+    dialect.addEventListener('change', () => {
+      if (seen.has(source.value) || source.value.trim() === '') source.value = starterFor(dialect.value);
+      run(wasm);
+    });
+    run(wasm);
+  }
+
+  start();
+</script>
+
+<style>
+  .playground {
+    padding-top: 3rem;
+    padding-bottom: 4rem;
+  }
+
+  h1 {
+    margin: 0 0 1rem;
+    font-size: clamp(1.9rem, 1.4rem + 1.6vw, 2.6rem);
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    line-height: 1.1;
+  }
+
+  .lede {
+    max-width: 46rem;
+    margin: 0 0 2rem;
+    color: var(--ink-muted);
+    font-family: var(--font-read);
+    font-size: 1.05rem;
+    line-height: 1.6;
+  }
+
+  .workbench {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+  }
+
+  @media (max-width: 860px) {
+    .workbench {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .toolbar label {
+    display: grid;
+    gap: 0.35rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  select,
+  textarea {
+    font: inherit;
+    color: var(--ink);
+    background: var(--panel);
+    border: 1px solid var(--line-strong);
+    border-radius: 7px;
+  }
+
+  select {
+    min-height: 44px;
+    max-width: 100%;
+    padding: 0 0.75rem;
+  }
+
+  .source-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  textarea {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    tab-size: 8;
+    resize: vertical;
+  }
+
+  textarea:disabled,
+  select:disabled {
+    opacity: 0.6;
+  }
+
+  .status {
+    margin: 0;
+    min-height: 1.5rem;
+    color: var(--ink-muted);
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+  }
+
+  .results {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.25rem 1.5rem;
+  }
+
+  @media (max-width: 560px) {
+    .results {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .results section {
+    min-width: 0;
+  }
+
+  .results .wide {
+    grid-column: 1 / -1;
+  }
+
+  .results h2 {
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  .results pre {
+    margin: 0;
+    min-height: 3.5rem;
+    max-height: 24rem;
+    overflow: auto;
+    font-size: 0.85rem;
+  }
+
+  .messages {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+
+  .messages:empty::before {
+    content: 'No messages.';
+    color: var(--ink-muted);
+  }
+
+  .messages li {
+    padding: 0.5rem 0.75rem;
+    border-left: 3px solid var(--line-strong);
+    background: var(--panel);
+    border-radius: 0 7px 7px 0;
+    overflow-wrap: anywhere;
+  }
+
+  .messages li.error {
+    border-left-color: var(--h-accent);
+  }
+
+  .note {
+    max-width: 46rem;
+    margin: 2rem 0 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+</style>
