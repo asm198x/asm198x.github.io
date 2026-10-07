@@ -282,18 +282,19 @@ start:  border 2
           <p class="eyebrow">Install</p>
           <h2>Grab a binary, or build it.</h2>
           <p>
-            Asm198x ships as a prebuilt, statically-linked binary on GitHub
-            Releases for macOS, Linux, and Windows &mdash; no runtime, no
-            toolchain. Or build it from source with a single <code>cargo build</code>;
-            the CLI is featherweight, with no GUI or graphics dependencies.
+            Install with Homebrew on macOS (Apple silicon or Intel) and Linux
+            (ARM64 or x86-64). Prebuilt archives cover both systems and
+            Windows x86-64, with no Rust toolchain needed. You can also
+            build from source with <code>cargo build</code>.
           </p>
           <div class="actions">
             <a class="button primary" href="https://github.com/asm198x/asm198x/releases">Download releases</a>{' '}
             <a class="button secondary" href="https://github.com/asm198x/asm198x">Source</a>
           </div>
         </div>
-        <pre class="install-code"><code><span class="c"># prebuilt binaries</span>
-github.com/asm198x/asm198x/releases
+        <pre class="install-code" tabindex="0"><code><span class="c"># macOS or Linux with Homebrew</span>
+brew install asm198x/tap/asm198x
+asm198x --version
 
 <span class="c"># or build from source</span>
 git clone https://github.com/asm198x/asm198x
