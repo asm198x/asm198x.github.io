@@ -1,8 +1,11 @@
+import { readFileSync } from 'node:fs';
+
 /**
  * The version this site documents.
  *
- * The Pages workflow selects the newest release tag that carries the book and
- * passes it as ASM198X_REF. That is deliberately *not* always the newest
+ * scripts/fetch-asm198x.sh selects the newest release tag that carries the book
+ * and records it in _asm198x/.documented-version (ASM198X_REF overrides it).
+ * That is deliberately *not* always the newest
  * release: a release without `docs/book/src/SUMMARY.md` is skipped, and when no tag
  * qualifies the workflow falls back to building from main.
  *
@@ -12,7 +15,15 @@
  */
 
 /** e.g. `asm198x-v0.0.15` -> `v0.0.15`. */
-export function documentedVersion(ref = process.env.ASM198X_REF): string | null {
+function recordedRef(): string | undefined {
+  try {
+    return readFileSync('_asm198x/.documented-version', 'utf8').trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function documentedVersion(ref = process.env.ASM198X_REF ?? recordedRef()): string | null {
   if (!ref) return null;
   const tag = ref.match(/^asm198x-(v\d+\.\d+\.\d+.*)$/);
   if (tag) return tag[1];
