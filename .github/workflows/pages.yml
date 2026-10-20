@@ -1,16 +1,20 @@
 name: Pages
 
+# Builds the site and deploys it to GitHub Pages with the workflow every 198x
+# site shares (stevehill1981/198x-workflows). Pull requests build and check
+# without deploying.
+#
+# The build fetches what it documents itself (scripts/fetch-asm198x.sh chooses
+# the version) and takes the playground from the pinned @asm198x/web package,
+# so nothing here compiles Rust. Asm198x dispatches docs-changed when its
+# documentation moves or it releases; the daily run is the backstop.
 on:
+  pull_request:
   push:
     branches:
       - main
-  # The book comes from another repo, so a site rebuild is how its changes
-  # reach the world. `repository_dispatch` lets an asm198x release trigger one;
-  # the weekly run is the backstop for when nothing fires it.
   repository_dispatch:
     types: [docs-changed]
-  # Daily rather than weekly: this is the backstop for when nothing fires the
-  # dispatch above, and a week is a long time for a documentation fix to wait.
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
@@ -25,163 +29,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build Astro site
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Check out site
-        uses: actions/checkout@v7
-
-      # The book's source lives in the assembler's own repo, next to the code
-      # it documents, so a change that stales a page fails the same CI run that
-      # made it. Here we only *publish* it: this workflow checks that repo out
-      # and builds the book into /docs/ on the site.
-      #
-      # The dependency points site -> code, which is the direction that needs
-      # no credentials: asm198x is public, so a plain checkout reaches it and
-      # nothing has to push the other way.
-      - name: Check out asm198x for the book
-        uses: actions/checkout@v7
-        with:
-          repository: asm198x/asm198x
-          # The released binary is what people have installed, so the published
-          # book describes the release rather than whatever main is mid-change.
-          # `fetch-depth: 0` so the tag lookup below can see the tags.
-          fetch-depth: 0
-          path: _asm198x
-
-      - name: Select the version to document
-        id: release
-        working-directory: _asm198x
-        run: |
-          # Prefer the newest release that actually carries the book. The book
-          # landed after v0.0.12, so the newest tag alone would check out a
-          # commit with no `docs/book` and fail the build — and every release
-          # before the book will always be in that state, so this is a standing
-          # condition rather than a one-off.
-          ref=""
-          # release-plz tags as `asm198x-v0.0.12`, not `v0.0.12`; a bare
-          # `v*` glob silently matches nothing and the fallback below would
-          # quietly publish main forever.
-          for tag in $(git tag --list 'asm198x-v*' --sort=-v:refname); do
-            # Probes SUMMARY.md rather than book.toml: the nav is what the
-            # site renders from, and book.toml is mdBook's config, which is
-            # being withdrawn. The two are equivalent across every tag — the
-            # five that carry one carry the other — so this changes nothing
-            # today and keeps working once book.toml is gone.
-            if git cat-file -e "${tag}:docs/book/src/SUMMARY.md" 2>/dev/null; then
-              ref="${tag}"
-              break
-            fi
-          done
-          if [ -z "${ref}" ]; then
-            echo "::notice::no release carries the book yet; building from main"
-            ref=$(git rev-parse origin/main)
-            version="${ref}"
-          else
-            version="${ref}"
-            # Publish the newest documentation that still describes the released
-            # binary. See `decisions/one-documentation-surface.md`.
-            #
-            # Pinning to the tag satisfies the released-tag rule, but strictly
-            # than it requires: a documentation-only change touches no package
-            # directory, so release-plz opens no release PR, so prose could not
-            # reach a reader without a release cut by hand.
-            #
-            # When the code has not moved since the release, `main` and the tag
-            # produce identical generated pages, so building from `main` cannot
-            # describe a binary nobody has. When it has moved, the tag wins.
-            #
-            # `xtask` is in the comparison because it generates those pages, and
-            # the manifests because they carry the version.
-            if git diff --quiet "${ref}" origin/main -- crates xtask Cargo.toml Cargo.lock; then
-              echo "::notice::code unchanged since ${ref}; publishing documentation from main"
-              ref=$(git rev-parse origin/main)
-            else
-              echo "::notice::code has moved since ${ref}; publishing its documentation until the next release"
-            fi
-          fi
-          git checkout --quiet "${ref}"
-          # The label names the release these pages describe, which is not
-          # always the revision they were built from.
-          echo "ref=${version}" >> "$GITHUB_OUTPUT"
-          echo "Building the book from ${ref}"
-
-      # The playground is the assembler compiled to WebAssembly, built out of
-      # the checkout selected above so the module in the tab is the release
-      # the pages describe. scripts/fetch-wasm.sh does the build during
-      # `npm run build`; these steps give it the toolchain. The Rust version
-      # is the assembler's own pin, read from its checkout.
-      - name: Read the assembler's pinned toolchain
-        id: rust
-        working-directory: _asm198x
-        run: |
-          channel=$(awk -F'"' '/^channel/{print $2}' rust-toolchain.toml)
-          echo "channel=${channel}" >> "$GITHUB_OUTPUT"
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ steps.rust.outputs.channel }}
-          targets: wasm32-unknown-unknown
-
-      - name: Cache Rust build artifacts
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: _asm198x/crates/asm198x-web -> target
-
-      - name: Install wasm-pack
-        uses: taiki-e/install-action@v2
-        with:
-          tool: wasm-pack
-
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      # Built after the version is selected, so the site can state which release
-      # it documents, and so the documentation pages come from that release
-      # rather than from main.
-      #
-      # This one step now builds the whole site, documentation included. mdBook
-      # is withdrawn (`decisions/one-documentation-surface.md`): the pages under
-      # /docs/ are Astro routes rendering the markdown out of `_asm198x`, so
-      # there is no second build system, no second design, and no seam for a
-      # reader to cross.
-      - name: Build site
-        run: npm run build
-        env:
-          ASM198X_REF: ${{ steps.release.outputs.ref }}
-
-      # Between building and publishing, because a page that fails WCAG AA is
-      # not one to deploy. Every route, both themes — roughly half the defects
-      # this caught when it was first run existed in exactly one of them.
-      - name: Install the browser the sweep drives
-        run: npx playwright install --with-deps chromium
-
-      - name: Check accessibility
-        run: npm run a11y
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: dist
-
-  deploy:
-    name: Deploy GitHub Pages
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
+  pages:
+    name: Pages
+    uses: stevehill1981/198x-workflows/.github/workflows/pages-astro.yml@v1
+    with:
+      browser-check-command: npm run a11y

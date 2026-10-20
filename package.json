@@ -11,10 +11,11 @@
     "build": "astro build",
     "preview": "astro preview",
     "docs:fetch": "./scripts/fetch-asm198x.sh",
-    "wasm:build": "./scripts/fetch-wasm.sh",
+    "wasm:build": "node scripts/stage-playground.mjs",
     "a11y": "node scripts/a11y-sweep.mjs"
   },
   "dependencies": {
+    "@asm198x/web": "0.4.0",
     "@astrojs/sitemap": "^3.7.3",
     "astro": "^7.0.3"
   },
